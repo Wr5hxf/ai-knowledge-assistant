@@ -8,7 +8,8 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.llms import OpenAI
 from langchain.chains import ConversationalRetrievalChain
-from openai.error import RateLimitError
+from openai._exceptions import RateLimitError
+
 
 # Streamlit Setup
 st.set_page_config(page_title="AI Knowledge Assistant", page_icon="🤖", layout="wide")
