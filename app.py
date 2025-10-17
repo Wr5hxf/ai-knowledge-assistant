@@ -1,4 +1,5 @@
 import os
+import time
 import tempfile
 import streamlit as st
 from langchain.document_loaders import PyPDFLoader, TextLoader
@@ -40,6 +41,7 @@ if build_btn and uploaded_files:
                 loader = TextLoader(tmp_path)
 
             docs.extend(loader.load())
+            time.sleep(1)  # OpenAI limit protection (wait 1 second after each file)
 
         splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
         chunks = splitter.split_documents(docs)
