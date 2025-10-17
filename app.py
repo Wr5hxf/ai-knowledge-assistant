@@ -8,13 +8,14 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.llms import OpenAI
 from langchain.chains import ConversationalRetrievalChain
+from openai.error import RateLimitError
 
-# Streamlit Page Setup
+# Streamlit Setup
 st.set_page_config(page_title="AI Knowledge Assistant", page_icon="🤖", layout="wide")
 st.title("🤖 AI Knowledge Assistant")
 st.markdown("Upload your documents (PDF or TXT) and ask any question related to them.")
 
-# Input API Key
+# API key
 api_key = st.text_input("🔑 Enter your OpenAI API Key:", type="password")
 if not api_key:
     st.warning("Please enter your OpenAI API key to continue.")
@@ -24,6 +25,17 @@ os.environ["OPENAI_API_KEY"] = api_key
 # Upload files
 uploaded_files = st.file_uploader("📂 Upload Files", type=["pdf", "txt"], accept_multiple_files=True)
 build_btn = st.button("⚙️ Build Knowledge Base")
+
+def embed_with_retry(chunks, embeddings, retries=5):
+    for attempt in range(retries):
+        try:
+            return FAISS.from_documents(chunks, embeddings)
+        except RateLimitError:
+            wait = (attempt + 1) * 10
+            st.warning(f"⚠️ API limit reached. Retrying in {wait} seconds...")
+            time.sleep(wait)
+    st.error("❌ Failed to build after multiple retries. Try again later.")
+    return None
 
 if build_btn and uploaded_files:
     with st.spinner("Processing files..."):
@@ -39,16 +51,16 @@ if build_btn and uploaded_files:
                     tmp_file.write(file.read())
                     tmp_path = tmp_file.name
                 loader = TextLoader(tmp_path)
-
             docs.extend(loader.load())
-            time.sleep(1)  # OpenAI limit protection (wait 1 second after each file)
 
         splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
         chunks = splitter.split_documents(docs)
         embeddings = OpenAIEmbeddings()
-        vectordb = FAISS.from_documents(chunks, embeddings)
-        st.session_state["db"] = vectordb
-        st.success("✅ Knowledge Base Ready!")
+
+        vectordb = embed_with_retry(chunks, embeddings)
+        if vectordb:
+            st.session_state["db"] = vectordb
+            st.success("✅ Knowledge Base Ready!")
 
 # Chat section
 if "db" in st.session_state:
