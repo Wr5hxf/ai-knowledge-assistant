@@ -41,7 +41,7 @@ if build_btn and uploaded_files:
 
             docs.extend(loader.load())
 
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
         chunks = splitter.split_documents(docs)
         embeddings = OpenAIEmbeddings()
         vectordb = FAISS.from_documents(chunks, embeddings)
