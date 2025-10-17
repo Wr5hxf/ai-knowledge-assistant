@@ -1,4 +1,5 @@
 import os
+import tempfile
 import streamlit as st
 from langchain.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -28,9 +29,16 @@ if build_btn and uploaded_files:
         docs = []
         for file in uploaded_files:
             if file.name.endswith(".pdf"):
-                loader = PyPDFLoader(file)
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                    tmp_file.write(file.read())
+                    tmp_path = tmp_file.name
+                loader = PyPDFLoader(tmp_path)
             else:
-                loader = TextLoader(file)
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp_file:
+                    tmp_file.write(file.read())
+                    tmp_path = tmp_file.name
+                loader = TextLoader(tmp_path)
+
             docs.extend(loader.load())
 
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
@@ -40,6 +48,7 @@ if build_btn and uploaded_files:
         st.session_state["db"] = vectordb
         st.success("✅ Knowledge Base Ready!")
 
+# Chat section
 if "db" in st.session_state:
     vectordb = st.session_state["db"]
     chat_history = st.session_state.get("chat_history", [])
